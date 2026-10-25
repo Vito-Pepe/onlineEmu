@@ -1,0 +1,67 @@
+# onlineEmu: libreria di giochi retro con emulatore nel browser (RomM + EmulatorJS).
+# Il Pi conserva i giochi, la pagina e i salvataggi; il gioco gira sul dispositivo che lo apre.
+# Segreti (password del database, chiave di RomM) solo nel .env sul Pi, vedi README.
+
+services:
+  romm:
+    # Versione fissa: si aggiorna cambiando il numero qui, con una PR (il database viene migrato all'avvio)
+    image: rommapp/romm:5.4.1
+    ports:
+      # Raggiungibile dalla LAN (http://192.168.1.22:8088) e dalla tailnet;
+      # in HTTPS da https://retro.<tailnet>.ts.net (repo ingressi-https). Mai su Internet.
+      - "8088:8080"
+    environment:
+      - TZ=Europe/Rome
+      - DB_HOST=db
+      - DB_NAME=romm
+      - DB_USER=romm
+      - DB_PASSWD=${DB_PASSWD:?manca DB_PASSWD nel .env}
+      - ROMM_AUTH_SECRET_KEY=${ROMM_AUTH_SECRET_KEY:?manca ROMM_AUTH_SECRET_KEY nel .env}
+      # Copertine e dati dei giochi senza account né chiavi
+      - HASHEOUS_API_ENABLED=true
+      # Pochi processi: il Pi è condiviso con le altre app
+      - SCAN_WORKERS=2
+      - WEB_SERVER_CONCURRENCY=2
+      # Solo IPv4: senza, nginx non parte dove IPv6 manca
+      - IPV4_ONLY=true
+    volumes:
+      # Una sola cartella del Pi per tutto: giochi (dati/library/roms/<console>), BIOS
+      # (dati/library/bios/<console>), salvataggi, copertine e configurazione.
+      # Una cartella sola e non tante: RomM sposta i file con hardlink, che non attraversano i mount.
+      - ./dati:/romm
+      - cache:/redis-data
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 300
+    restart: unless-stopped
+
+  db:
+    image: mariadb:11.8
+    environment:
+      - MARIADB_ROOT_PASSWORD=${DB_ROOT_PASSWD:?manca DB_ROOT_PASSWD nel .env}
+      - MARIADB_DATABASE=romm
+      - MARIADB_USER=romm
+      - MARIADB_PASSWORD=${DB_PASSWD:?manca DB_PASSWD nel .env}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 30s
+      start_interval: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 200
+    restart: unless-stopped
+
+volumes:
+  # Database di RomM: elenco giochi, utenti, salvataggi registrati. Da non perdere.
+  db-data:
+  # Cache delle operazioni in corso: si può ricreare
+  cache:
