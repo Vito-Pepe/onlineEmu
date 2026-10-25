@@ -1,0 +1,4 @@
+.env
+update.log
+# Giochi, BIOS, salvataggi e copertine: restano solo sul Pi
+dati/
