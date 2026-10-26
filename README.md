@@ -48,12 +48,13 @@ Le cartelle si creano a mano, così sono tue (utente `pepe`) e puoi copiarci i g
 **3. Crea i segreti** (generati sul Pi, non passano da nessuna parte)
 
 ```bash
-{ echo "DB_PASSWD=$(openssl rand -hex 24)"; echo "DB_ROOT_PASSWD=$(openssl rand -hex 24)"; echo "ROMM_AUTH_SECRET_KEY=$(openssl rand -hex 32)"; } >> .env
+printf 'DB_PASSWD=%s\nDB_ROOT_PASSWD=%s\nROMM_AUTH_SECRET_KEY=%s\n' "$(openssl rand -hex 24)" "$(openssl rand -hex 24)" "$(openssl rand -hex 32)" > .env
+sed -i 's/\x1b\][^\x07]*\x07//g' .env
 chmod 600 .env
-grep -c '=' .env
+cut -d= -f1 .env | cat -A
 ```
 
-Atteso: `3`.
+Atteso: `DB_PASSWD$`, `DB_ROOT_PASSWD$`, `ROMM_AUTH_SECRET_KEY$` e nient'altro. Il `sed` toglie i codici invisibili che alcuni terminali (Termius) possono infilare nel file: con quelli `docker compose` dà `unexpected character "\x1b"`.
 
 **4. Avvia**
 
@@ -100,10 +101,11 @@ Solo giochi di cui possiedi la cartuccia, o homebrew/giochi liberi.
 
 ## Su iPhone
 
+- **Gioca sempre dall'indirizzo HTTPS** (`https://retro.<tailnet>.ts.net`), in Safari. Da `http://192.168.1.22:8088` il gioco su iPhone va a circa 25 fps con l'audio distorto; in HTTPS va fluido.
 - In Safari apri `https://retro.<tailnet>.ts.net`, poi **Condividi → Aggiungi alla schermata Home**: si apre a schermo intero come un'app e iOS non cancella i giochi già scaricati.
 - L'audio parte dopo il primo tocco (regola di iOS).
 - I controller Bluetooth (PS4/PS5, Xbox, Backbone) funzionano.
-- Con il **Relay privato di iCloud** gli indirizzi `*.ts.net` possono non aprirsi: usa `http://vito:8088`.
+- Con il **Relay privato di iCloud** gli indirizzi `*.ts.net` possono non aprirsi: usa `http://vito:8088` (ma in http il gioco va lento, vedi sopra).
 
 ## Aggiornare RomM
 
