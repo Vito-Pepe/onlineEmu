@@ -37,6 +37,18 @@ services:
     security_opt:
       - no-new-privileges:true
     pids_limit: 300
+    # Controllo di salute: /api/heartbeat è la richiesta che la pagina fa all'apertura,
+    # risponde senza login e passa da nginx, dal backend e dal database (non esce su Internet).
+    # Dopo un aggiornamento RomM migra il database all'avvio: per 5 minuti (start_period) i
+    # controlli falliti non contano. Poi, se fallisce 3 volte di fila, il container diventa
+    # "unhealthy" e il guardiano del Pi (repo guardiano) lo riavvia
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/heartbeat"]
+      start_period: 5m
+      start_interval: 15s
+      interval: 60s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
 
   db:
