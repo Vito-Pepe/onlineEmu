@@ -69,7 +69,9 @@ docker compose ps
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8088/api/heartbeat
 ```
 
-Atteso: due container `Up` (il database `healthy`) e `200`. Se esce `000` aspetta ancora un po': al primo avvio RomM prepara il database.
+Atteso: due container `Up`, tutti e due `healthy`, e `200`. Se esce `000` (e RomM è ancora `health: starting`) aspetta ancora un po': al primo avvio RomM prepara il database.
+
+Tutti e due i servizi hanno un `healthcheck` (RomM chiede `/api/heartbeat` ogni minuto): se uno resta acceso ma smette di rispondere, Docker lo segna `unhealthy` e il guardiano del Pi (repo `guardiano`) lo riavvia.
 
 **5. Aggiornamento automatico** (senza sudo)
 
